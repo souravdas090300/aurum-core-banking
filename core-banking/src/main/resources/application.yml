@@ -27,6 +27,13 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/banking}
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8180/realms/banking/protocol/openid-connect/certs}
+
 server:
   port: 8080
   error:
@@ -46,3 +53,12 @@ logging:
   level:
     com.aurum: DEBUG
     org.springframework.security: INFO
+
+# ── Application-level security & rate-limit config ───────────────────────────
+app:
+  security:
+    # AES-256 key — must be exactly 32 bytes; override via ENCRYPTION_KEY env var in prod
+    encryption-key: ${ENCRYPTION_KEY:0123456789abcdef0123456789abcdef}
+  rate-limit:
+    auth-requests-per-minute: 10
+    api-requests-per-minute: 60
