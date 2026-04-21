@@ -5,6 +5,9 @@ import com.aurum.core_banking.common.exception.AccountNotActiveException;
 import com.aurum.core_banking.common.exception.AccountNotFoundException;
 import com.aurum.core_banking.common.exception.CurrencyMismatchException;
 import com.aurum.core_banking.common.exception.InsufficientFundsException;
+import com.aurum.core_banking.common.exception.TransactionBlockedException;
+import com.aurum.core_banking.domain.rules.CustomerFact;
+import com.aurum.core_banking.domain.rules.TransactionFact;
 import com.aurum.core_banking.infrastructure.persistence.entity.AccountEntity;
 import com.aurum.core_banking.infrastructure.persistence.entity.TransactionEntity;
 import com.aurum.core_banking.infrastructure.persistence.repository.AccountRepository;
@@ -18,6 +21,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -27,6 +31,7 @@ public class TransferService {
     private final AccountRepository     accountRepository;
     private final TransactionRepository transactionRepository;
     private final AuditService          auditService;
+    private final FraudDetectionService  fraudDetectionService;
 
     // SERIALIZABLE isolation — highest level, prevents phantom reads in concurrent transfers
     @Transactional(isolation = Isolation.SERIALIZABLE, rollbackFor = Exception.class)
@@ -51,6 +56,39 @@ public class TransferService {
             .orElseThrow(() -> new AccountNotFoundException(req.toAccountId()));
 
         validateTransfer(from, to, req);
+
+        // ── Run Drools fraud evaluation BEFORE any money moves ──
+        TransactionFact txFact = TransactionFact.builder()
+            .transactionId(UUID.randomUUID())
+            .fromAccountId(req.fromAccountId())
+            .toAccountId(req.toAccountId())
+            .amount(req.amount())
+            .currency(req.currency())
+            .timestamp(Instant.now())
+            .build();
+
+        CustomerFact customerFact = CustomerFact.builder()
+            .customerId(from.getCustomerId().toString())
+            .isPep(false) // load from customer repo in full impl
+            .build();
+
+        FraudResult fraud = fraudDetectionService.evaluate(txFact, customerFact);
+
+        if (fraud.isBlocked()) {
+            TransactionEntity blockedTx = TransactionEntity.builder()
+                .idempotencyKey(req.idempotencyKey())
+                .fromAccountId(req.fromAccountId())
+                .toAccountId(req.toAccountId())
+                .amount(req.amount())
+                .currency(req.currency())
+                .transactionType(TransactionEntity.TransactionType.TRANSFER)
+                .status(TransactionEntity.TransactionStatus.BLOCKED)
+                .reference(fraud.getBlockReason())
+                .build();
+            transactionRepository.save(blockedTx);
+
+            throw new TransactionBlockedException(fraud.getBlockReason(), fraud.getFraudFlags());
+        }
 
         // Debit source
         from.setBalance(from.getBalance().subtract(req.amount()));

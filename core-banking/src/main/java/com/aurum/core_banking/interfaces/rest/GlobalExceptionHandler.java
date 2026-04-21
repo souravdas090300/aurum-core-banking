@@ -5,6 +5,7 @@ import com.aurum.core_banking.common.exception.AccountNotFoundException;
 import com.aurum.core_banking.common.exception.CurrencyMismatchException;
 import com.aurum.core_banking.common.exception.InsufficientFundsException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -22,7 +23,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InsufficientFundsException.class)
     ProblemDetail handleInsufficientFunds(InsufficientFundsException ex) {
-        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(422), ex.getMessage());
         pd.setTitle("Insufficient Funds");
         pd.setProperty("errorCode", "INSUFFICIENT_FUNDS");
         return pd;
@@ -38,7 +39,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CurrencyMismatchException.class)
     ProblemDetail handleCurrencyMismatch(CurrencyMismatchException ex) {
-        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(422), ex.getMessage());
         pd.setTitle("Currency Mismatch");
         pd.setProperty("errorCode", "CURRENCY_MISMATCH");
         return pd;

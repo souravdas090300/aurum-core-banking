@@ -1,0 +1,100 @@
+package com.aurum.rules;
+
+import com.aurum.corebanking.domain.rules.CustomerFact;
+
+// ═══════════════════════════════════════════════════
+//  AURUM CORE BANKING — Credit Scoring Rules
+//  EU Consumer Credit Directive aligned
+// ═══════════════════════════════════════════════════
+
+// ── Rule 1: Excellent Credit — Auto Approve ──
+rule "Excellent Credit Score — Auto Approve"
+    salience 100
+when
+    $c : CustomerFact(
+        creditScore >= 750,
+        debtToIncomeRatio < 0.35,
+        loanDecision == null
+    )
+then
+    $c.setLoanDecision("APPROVED");
+    $c.setRiskScore(10);
+    System.out.println("[CREDIT] Auto-approved: score=" + $c.getCreditScore());
+    update($c);
+end
+
+// ── Rule 2: Good Credit — Approve with review ──
+rule "Good Credit Score — Approve"
+    salience 90
+when
+    $c : CustomerFact(
+        creditScore >= 680,
+        creditScore < 750,
+        debtToIncomeRatio < 0.43,
+        loanDecision == null
+    )
+then
+    $c.setLoanDecision("APPROVED");
+    $c.setRiskScore(30);
+    update($c);
+end
+
+// ── Rule 3: Fair Credit — Manual Review ──
+rule "Fair Credit Score — Manual Review Required"
+    salience 80
+when
+    $c : CustomerFact(
+        creditScore >= 580,
+        creditScore < 680,
+        loanDecision == null
+    )
+then
+    $c.setLoanDecision("REVIEW");
+    $c.setRiskScore(60);
+    System.out.println("[CREDIT] Manual review required: score=" + $c.getCreditScore());
+    update($c);
+end
+
+// ── Rule 4: Poor Credit — Decline ──
+rule "Poor Credit Score — Decline"
+    salience 70
+when
+    $c : CustomerFact(
+        creditScore < 580,
+        loanDecision == null
+    )
+then
+    $c.setLoanDecision("DECLINED");
+    $c.setRiskScore(90);
+    update($c);
+end
+
+// ── Rule 5: Override — High DTI always declines ──
+// Regardless of credit score, high debt-to-income is too risky
+rule "High Debt-to-Income — Override Decline"
+    salience 110
+when
+    $c : CustomerFact(
+        debtToIncomeRatio >= 0.50
+    )
+then
+    $c.setLoanDecision("DECLINED");
+    $c.setRiskScore(95);
+    $c.setAmlAlert(false);
+    System.out.println("[CREDIT] DTI override decline: dti=" + $c.getDebtToIncomeRatio());
+    update($c);
+end
+
+// ── Rule 6: PEP — Always manual review ──
+rule "PEP Customer — Always Manual Review"
+    salience 120
+when
+    $c : CustomerFact(
+        isPep == true,
+        loanDecision == "APPROVED"
+    )
+then
+    $c.setLoanDecision("REVIEW");
+    System.out.println("[CREDIT] PEP override to REVIEW");
+    update($c);
+end
