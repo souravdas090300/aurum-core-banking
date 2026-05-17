@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kmodule xmlns="http://www.drools.org/xsd/kmodule">
+    <!--
+        KieBase "rules": loads all DRL files under package com.aurum.rules
+        (maps to src/main/resources/rules/*.drl on the classpath).
+        ksession "ksession-rules": default stateful session name.
+        Services create fresh sessions per-request via kieContainer.newKieSession().
+    -->
+    <kbase name="rules" packages="com.aurum.rules">
+        <ksession name="ksession-rules" default="true"/>
+    </kbase>
+</kmodule>
