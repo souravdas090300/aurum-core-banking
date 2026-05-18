@@ -90,7 +90,7 @@ rule "PEP Customer — Always Manual Review"
     salience 120
 when
     $c : CustomerFact(
-        isPep == true,
+        pep == true,
         loanDecision == "APPROVED"
     )
 then

@@ -2,7 +2,7 @@ package com.aurum.core_banking.common.audit;
 
 import com.aurum.core_banking.infrastructure.persistence.entity.AuditLogEntity;
 import com.aurum.core_banking.infrastructure.persistence.repository.AuditLogRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;

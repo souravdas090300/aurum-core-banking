@@ -13,7 +13,7 @@ rule "PEP Customer — Block Until EDD Complete"
     salience 100
 when
     $c : CustomerFact(
-        isPep == true,
+        pep == true,
         sanctionsMatch == null
     )
     $tx : TransactionFact(

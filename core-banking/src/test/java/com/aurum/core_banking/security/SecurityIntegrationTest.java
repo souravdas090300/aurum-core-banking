@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -17,10 +18,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Integration tests that verify the security filter chain behaves correctly
  * without starting a real Keycloak instance.
  *
- * <p>These tests use {@code MockMvc} against the full application context so
- * Spring Security applies exactly as it would in production.
+ * <p>Uses an H2 in-memory database (PostgreSQL-compatible mode) so the tests
+ * run without Docker, while still exercising the real Spring Security configuration.
  */
 @SpringBootTest
+@TestPropertySource(properties = {
+        "spring.datasource.url=jdbc:h2:mem:securitytest;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;NON_KEYWORDS=VALUE",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password=",
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.flyway.enabled=false"
+})
 class SecurityIntegrationTest {
 
     @Autowired

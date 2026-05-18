@@ -2,6 +2,7 @@ package com.aurum.core_banking.application.service;
 
 import com.aurum.core_banking.common.audit.AuditService;
 import com.aurum.core_banking.common.exception.*;
+import com.aurum.core_banking.infrastructure.metrics.BankingMetrics;
 import com.aurum.core_banking.infrastructure.persistence.entity.AccountEntity;
 import com.aurum.core_banking.infrastructure.persistence.entity.AccountEntity.AccountStatus;
 import com.aurum.core_banking.infrastructure.persistence.entity.TransactionEntity;
@@ -41,6 +42,7 @@ class TransferServiceTest {
     @Mock TransactionRepository transactionRepository;
     @Mock FraudDetectionService fraudDetectionService;
     @Mock AuditService          auditService;
+    @Mock BankingMetrics        metrics;
 
     @InjectMocks
     TransferService transferService;

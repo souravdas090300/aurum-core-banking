@@ -34,7 +34,7 @@ when
         blocked == false
     )
 then
-    $tx.getFraudFlags().add("STRUCTURING_SUSPECTED");
+    $tx.getFraudFlags().add("VELOCITY_BREACH");
     $tx.setBlocked(true);
     $tx.setBlockReason("Velocity breach: " + $tx.getTransactionsLastHour()
                        + " transactions in last hour");
@@ -46,7 +46,7 @@ rule "Off-Hours Large Transfer — Enhanced Scrutiny"
     salience 80
 when
     $tx : TransactionFact(
-        isOffHours == true,
+        offHours == true,
         amount > 5000,
         blocked == false
     )

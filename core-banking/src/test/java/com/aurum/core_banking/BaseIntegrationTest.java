@@ -18,9 +18,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  *
  * <p>Flyway migrations run automatically on the shared container DB; each test that
  * modifies data must clean up after itself (or use @Transactional rollback).
+ *
+ * <p>Tests are skipped automatically when Docker is not available in the environment.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @ActiveProfiles("test")
 public abstract class BaseIntegrationTest {
 

@@ -31,7 +31,7 @@ public class CustomerFact {
     private int     termMonths;
 
     // ── Output fields (written by Drools rules) ───────────────────────────
-    private boolean sanctionsMatch;
+    private String sanctionsMatch;
 
     @Builder.Default
     private boolean amlAlert = false;
