@@ -1,0 +1,225 @@
+name: 🏦 Aurum Banking — CI Pipeline
+
+on:
+  push:
+    branches: [ develop, feature/**, hotfix/** ]
+  pull_request:
+    branches: [ main, develop ]
+    types: [ opened, synchronize, reopened ]
+
+# Cancel in-progress runs on the same branch to save CI minutes
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '21'
+  JAVA_DISTRIBUTION: 'temurin'
+  MAVEN_OPTS: '-Xmx1024m'
+
+jobs:
+
+  # ─────────────────────────────────────────
+  # JOB 1 — Unit Tests (fast, no DB needed)
+  # ─────────────────────────────────────────
+  unit-tests:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: core-banking
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Full history needed for SonarQube blame
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      - name: Run unit tests
+        run: |
+          mvn test \
+            -Dtest="**/*Test,**/*Tests" \
+            -Dit.skip=true \
+            --no-transfer-progress
+
+      - name: Upload unit test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: core-banking/target/surefire-reports/
+
+  # ─────────────────────────────────────────
+  # JOB 2 — Integration Tests (Testcontainers)
+  # ─────────────────────────────────────────
+  integration-tests:
+    name: 🐘 Integration Tests (PostgreSQL)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    defaults:
+      run:
+        working-directory: core-banking
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      # Docker is pre-installed on ubuntu-latest — Testcontainers uses it directly
+      - name: Run integration tests
+        run: |
+          mvn verify \
+            -Dtest="**/*IntegrationTest" \
+            -DfailIfNoTests=false \
+            --no-transfer-progress
+        env:
+          ENCRYPTION_KEY: ${{ secrets.TEST_ENCRYPTION_KEY }}
+
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: core-banking/target/failsafe-reports/
+
+  # ─────────────────────────────────────────
+  # JOB 3 — BDD Cucumber Tests
+  # ─────────────────────────────────────────
+  bdd-tests:
+    name: 🥒 BDD Cucumber Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    defaults:
+      run:
+        working-directory: core-banking
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      - name: Run Cucumber BDD tests
+        run: |
+          mvn test \
+            -Dtest=CucumberRunner \
+            -DfailIfNoTests=false \
+            --no-transfer-progress
+        env:
+          ENCRYPTION_KEY: ${{ secrets.TEST_ENCRYPTION_KEY }}
+
+      - name: Upload Cucumber HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cucumber-report
+          path: core-banking/target/cucumber-reports/
+
+  # ─────────────────────────────────────────
+  # JOB 4 — Security: OWASP Dependency Check
+  # ─────────────────────────────────────────
+  security-scan:
+    name: 🔒 OWASP Dependency Check
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    defaults:
+      run:
+        working-directory: core-banking
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      - name: Cache OWASP NVD database
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp
+          key: owasp-nvd-${{ github.run_id }}
+          restore-keys: owasp-nvd-
+
+      - name: Run OWASP Dependency Check
+        run: |
+          mvn dependency-check:check \
+            -DfailBuildOnCVSS=7 \
+            -DsuppressionFile=../.github/owasp-suppressions.xml \
+            --no-transfer-progress
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+
+      - name: Upload OWASP report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: owasp-report
+          path: core-banking/target/dependency-check-report.html
+
+  # ─────────────────────────────────────────
+  # JOB 5 — Code Quality: SonarQube + JaCoCo
+  # ─────────────────────────────────────────
+  code-quality:
+    name: 📊 SonarQube + JaCoCo Coverage
+    runs-on: ubuntu-latest
+    needs: [ integration-tests, bdd-tests ]
+    defaults:
+      run:
+        working-directory: core-banking
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Required for SonarQube blame / new-code detection
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      - name: Cache SonarQube analysis data
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: sonar-${{ runner.os }}
+
+      - name: Build + JaCoCo coverage + SonarQube
+        run: |
+          mvn verify sonar:sonar \
+            -Dsonar.projectKey=aurum-core-banking \
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.qualitygate.wait=true \
+            -DfailIfNoTests=false \
+            --no-transfer-progress
+        env:
+          ENCRYPTION_KEY: ${{ secrets.TEST_ENCRYPTION_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload JaCoCo coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-report
+          path: core-banking/target/site/jacoco/

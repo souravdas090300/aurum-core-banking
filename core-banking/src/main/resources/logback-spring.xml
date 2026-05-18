@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- ── DEVELOPMENT profile: human-readable colored output ── -->
+    <springProfile name="!prod">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%cyan(%d{HH:mm:ss.SSS}) %highlight(%-5level) %yellow([%thread]) %green(%logger{36}) - %msg%n</pattern>
+            </encoder>
+        </appender>
+        <root level="DEBUG">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- ── PRODUCTION profile: structured JSON — one line per log entry ── -->
+    <springProfile name="prod">
+
+        <!-- Console output as JSON (captured by systemd journal) -->
+        <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <providers>
+                    <timestamp>
+                        <fieldName>timestamp</fieldName>
+                        <timeZone>UTC</timeZone>
+                    </timestamp>
+                    <logLevel>
+                        <fieldName>level</fieldName>
+                    </logLevel>
+                    <loggerName>
+                        <fieldName>logger</fieldName>
+                        <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
+                    </loggerName>
+                    <threadName>
+                        <fieldName>thread</fieldName>
+                    </threadName>
+                    <message>
+                        <fieldName>message</fieldName>
+                    </message>
+                    <!-- MDC fields: traceId, spanId, userId, requestId, method, path -->
+                    <mdc/>
+                    <!-- Stack traces as structured field (not raw text) -->
+                    <stackTrace>
+                        <fieldName>stackTrace</fieldName>
+                        <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                            <maxDepthPerCause>10</maxDepthPerCause>
+                            <exclude>sun\.reflect\..*</exclude>
+                            <exclude>java\.lang\.reflect\..*</exclude>
+                        </throwableConverter>
+                    </stackTrace>
+                    <!-- Custom static fields added to every log line -->
+                    <pattern>
+                        <pattern>{ "app": "aurum-core-banking", "env": "${spring.profiles.active:-unknown}" }</pattern>
+                    </pattern>
+                </providers>
+            </encoder>
+        </appender>
+
+        <!-- Rolling file appender — 100 MB per file, 90-day history (GDPR compliance) -->
+        <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>/opt/aurum/logs/banking.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>/opt/aurum/logs/banking.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>100MB</maxFileSize>
+                <maxHistory>90</maxHistory>
+                <totalSizeCap>10GB</totalSizeCap>
+            </rollingPolicy>
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+        </appender>
+
+        <!-- Separate security audit log — 7-year retention (banking legal requirement) -->
+        <appender name="AUDIT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>/opt/aurum/logs/audit.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                <fileNamePattern>/opt/aurum/logs/audit.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+                <maxHistory>2555</maxHistory>
+            </rollingPolicy>
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+        </appender>
+
+        <!-- Route AUDIT logger to its own dedicated file -->
+        <logger name="AUDIT" level="INFO" additivity="false">
+            <appender-ref ref="AUDIT_FILE"/>
+        </logger>
+
+        <!-- Suppress noisy framework logs in production -->
+        <logger name="org.hibernate.SQL"            level="WARN"/>
+        <logger name="org.hibernate.type"           level="WARN"/>
+        <logger name="com.zaxxer.hikari"            level="INFO"/>
+        <logger name="org.springframework.security" level="WARN"/>
+        <logger name="org.testcontainers"           level="WARN"/>
+
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE"/>
+            <appender-ref ref="JSON_FILE"/>
+        </root>
+    </springProfile>
+
+</configuration>

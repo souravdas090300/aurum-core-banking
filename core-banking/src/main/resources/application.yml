@@ -3,24 +3,20 @@ spring:
     name: aurum-core-banking
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/banking_db
-    username: banking_user
-    password: ${DB_PASSWORD:changeme_local}
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      connection-timeout: 30000
+    url: jdbc:postgresql://localhost:5432/aurum_banking
+    username: aurum
+    password: ${DB_PASSWORD:aurum_secret}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: validate        # Flyway owns the schema, NOT Hibernate
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        jdbc:
-          batch_size: 25
+        default_schema: public
 
   flyway:
     enabled: true
@@ -31,34 +27,45 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/banking}
-          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8180/realms/banking/protocol/openid-connect/certs}
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8080/realms/aurum/protocol/openid-connect/certs}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/aurum}
 
-server:
-  port: 8080
-  error:
-    include-message: never      # Never leak internal errors
-    include-stacktrace: never
+encryption:
+  secret-key: ${AES_SECRET_KEY:0123456789abcdef0123456789abcdef}  # 32-byte hex key
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,metrics,prometheus,loggers
   endpoint:
     health:
       show-details: when-authorized
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        banking.transfers.processing.time: true
+        banking.fraud.evaluation.time: true
+    tags:
+      app: aurum-core-banking
+
+# Enable Spring @Scheduled and @Async
+spring.task.scheduling.pool.size: 4
+spring.task.execution.pool.core-size: 8
+
+rate-limit:
+  transfer:
+    capacity: 10
+    refill-tokens: 10
+    refill-seconds: 60
 
 logging:
   level:
-    com.aurum: DEBUG
-    org.springframework.security: INFO
-
-# ── Application-level security & rate-limit config ───────────────────────────
-app:
-  security:
-    # AES-256 key — must be exactly 32 bytes; override via ENCRYPTION_KEY env var in prod
-    encryption-key: ${ENCRYPTION_KEY:0123456789abcdef0123456789abcdef}
-  rate-limit:
-    auth-requests-per-minute: 10
-    api-requests-per-minute: 60
+    com.aurum: INFO
+    org.drools: WARN
+    org.springframework.security: WARN

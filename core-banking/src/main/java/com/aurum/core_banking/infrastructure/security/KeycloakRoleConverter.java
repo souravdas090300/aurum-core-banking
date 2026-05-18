@@ -13,11 +13,17 @@ import java.util.stream.Collectors;
 
 /**
  * Extracts Keycloak realm roles from the {@code realm_access.roles} JWT claim
- * and maps them to Spring Security {@code ROLE_} prefixed {@link GrantedAuthority}s.
+ * and converts them to Spring Security {@code GrantedAuthority} objects with
+ * the {@code ROLE_} prefix.
  *
- * <p>Keycloak embeds roles as a nested object: {@code {"realm_access":{"roles":["ROLE_TELLER"]}}}.
- * Spring's built-in {@code JwtGrantedAuthoritiesConverter} only handles flat string-list claims,
- * so this custom converter is required.
+ * <p>Keycloak JWT structure:
+ * <pre>
+ * {
+ *   "realm_access": {
+ *     "roles": ["banking-user", "loan-officer", "compliance-officer"]
+ *   }
+ * }
+ * </pre>
  */
 public class KeycloakRoleConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
 
@@ -25,14 +31,15 @@ public class KeycloakRoleConverter implements Converter<Jwt, Collection<GrantedA
     @SuppressWarnings("unchecked")
     public Collection<GrantedAuthority> convert(Jwt jwt) {
         Map<String, Object> realmAccess =
-                (Map<String, Object>) jwt.getClaims()
-                                         .getOrDefault("realm_access", Collections.emptyMap());
+                (Map<String, Object>) jwt.getClaims().get("realm_access");
 
-        List<String> roles = (List<String>) realmAccess
-                .getOrDefault("roles", Collections.emptyList());
+        if (realmAccess == null || !realmAccess.containsKey("roles")) {
+            return Collections.emptyList();
+        }
 
+        List<String> roles = (List<String>) realmAccess.get("roles");
         return roles.stream()
-                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                    .collect(Collectors.toList());
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase().replace('-', '_')))
+                .collect(Collectors.toList());
     }
 }

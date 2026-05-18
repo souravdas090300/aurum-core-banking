@@ -1,65 +1,70 @@
 package com.aurum.core_banking.interfaces.rest;
 
-import com.aurum.core_banking.common.exception.AccountNotActiveException;
-import com.aurum.core_banking.common.exception.AccountNotFoundException;
-import com.aurum.core_banking.common.exception.CurrencyMismatchException;
-import com.aurum.core_banking.common.exception.InsufficientFundsException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
+import com.aurum.core_banking.common.exception.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.*;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import java.time.Instant;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * Centralised exception handler — converts domain exceptions into consistent
+ * RFC 7807 Problem Details JSON responses.
+ */
+@Slf4j
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(AccountNotFoundException.class)
-    ProblemDetail handleNotFound(AccountNotFoundException ex) {
-        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
-        pd.setTitle("Account Not Found");
-        return pd;
+    public ResponseEntity<Map<String, Object>> handleNotFound(AccountNotFoundException ex) {
+        return problem(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
-    @ExceptionHandler(InsufficientFundsException.class)
-    ProblemDetail handleInsufficientFunds(InsufficientFundsException ex) {
-        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
-        pd.setTitle("Insufficient Funds");
-        pd.setProperty("errorCode", "INSUFFICIENT_FUNDS");
-        return pd;
+    @ExceptionHandler({AccountNotActiveException.class,
+                        InsufficientFundsException.class,
+                        CurrencyMismatchException.class,
+                        TransactionBlockedException.class})
+    public ResponseEntity<Map<String, Object>> handleUnprocessable(RuntimeException ex) {
+        return problem(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
     }
 
-    @ExceptionHandler(AccountNotActiveException.class)
-    ProblemDetail handleNotActive(AccountNotActiveException ex) {
-        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
-        pd.setTitle("Account Not Active");
-        pd.setProperty("errorCode", "ACCOUNT_NOT_ACTIVE");
-        return pd;
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+
+        Map<String, String> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
+                .collect(Collectors.toMap(
+                        FieldError::getField,
+                        fe -> fe.getDefaultMessage() != null ? fe.getDefaultMessage() : "invalid",
+                        (a, b) -> a));
+
+        Map<String, Object> body = Map.of(
+                "status",    HttpStatus.BAD_REQUEST.value(),
+                "error",     "Validation Failed",
+                "fields",    fieldErrors,
+                "timestamp", Instant.now().toString());
+
+        return ResponseEntity.badRequest().body(body);
     }
 
-    @ExceptionHandler(CurrencyMismatchException.class)
-    ProblemDetail handleCurrencyMismatch(CurrencyMismatchException ex) {
-        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
-        pd.setTitle("Currency Mismatch");
-        pd.setProperty("errorCode", "CURRENCY_MISMATCH");
-        return pd;
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
-        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
-        pd.setTitle("Bad Request");
-        pd.setProperty("errors", ex.getBindingResult().getFieldErrors().stream()
-            .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
-            .toList());
-        return pd;
-    }
-
-    // Catch-all — never leak internal details to the client
     @ExceptionHandler(Exception.class)
-    ProblemDetail handleGeneric(Exception ex) {
-        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
-            "An unexpected error occurred. Please contact support.");
-        pd.setTitle("Internal Server Error");
-        return pd;
+    public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+        log.error("Unhandled exception", ex);
+        return problem(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
+    }
+
+    private ResponseEntity<Map<String, Object>> problem(HttpStatus status, String detail) {
+        return ResponseEntity.status(status).body(Map.of(
+                "status",    status.value(),
+                "error",     status.getReasonPhrase(),
+                "detail",    detail,
+                "timestamp", Instant.now().toString()));
     }
 }

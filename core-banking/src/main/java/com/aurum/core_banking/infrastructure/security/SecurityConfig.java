@@ -2,68 +2,61 @@ package com.aurum.core_banking.infrastructure.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
-import org.springframework.security.web.header.writers.StaticHeadersWriter;
 
+/**
+ * Spring Security 6 configuration — stateless JWT resource server.
+ *
+ * <p>Role mappings:
+ * <ul>
+ *   <li>BANKING_USER — read own accounts, initiate transfers</li>
+ *   <li>LOAN_OFFICER — review and approve/decline loan applications</li>
+ *   <li>COMPLIANCE_OFFICER — view audit trail, FIAU reports</li>
+ * </ul>
+ *
+ * <p>Roles are extracted from Keycloak's {@code realm_access.roles} claim
+ * via {@link KeycloakRoleConverter}.
+ */
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)  // enables @PreAuthorize on methods
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // ── Session: STATELESS — JWT carries all state ────────────────────
-            .sessionManagement(s ->
-                s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-            // ── CSRF: disabled for stateless REST API ─────────────────────────
             .csrf(csrf -> csrf.disable())
-
-            // ── Endpoint authorisation ────────────────────────────────────────
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/health").permitAll()
-                .requestMatchers("/actuator/info").permitAll()
-                // All remaining actuator endpoints — ADMIN only
-                .requestMatchers("/actuator/**").hasRole("ADMIN")
-                // Everything else requires a valid JWT at minimum;
-                // fine-grained RBAC is enforced via @PreAuthorize per method
+                // Public health/info endpoints
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                // Account endpoints — banking users
+                .requestMatchers(HttpMethod.GET,  "/api/v1/accounts/**")
+                    .hasAnyRole("BANKING_USER", "LOAN_OFFICER", "COMPLIANCE_OFFICER")
+                // Transfer initiation
+                .requestMatchers(HttpMethod.POST, "/api/v1/transfers")
+                    .hasRole("BANKING_USER")
+                // Loan officer actions
+                .requestMatchers("/api/v1/loans/**")
+                    .hasAnyRole("BANKING_USER", "LOAN_OFFICER")
+                // All other requests must be authenticated
                 .anyRequest().authenticated()
             )
-
-            // ── OAuth2 Resource Server — validate Keycloak JWTs ──────────────
             .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter()))
-            )
-
-            // ── OWASP Security Headers ────────────────────────────────────────
-            .headers(headers -> headers
-                .httpStrictTransportSecurity(hsts -> hsts
-                    .includeSubDomains(true)
-                    .maxAgeInSeconds(31_536_000))
-                .frameOptions(frame -> frame.deny())
-                .contentTypeOptions(ct -> {})
-                .referrerPolicy(ref ->
-                    ref.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
-                .addHeaderWriter(new StaticHeadersWriter(
-                    "Permissions-Policy", "camera=(), microphone=(), geolocation=()"))
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
             );
 
         return http.build();
     }
 
-    /**
-     * Wires our {@link KeycloakRoleConverter} so that JWT authentication tokens
-     * carry proper {@code ROLE_} authorities drawn from {@code realm_access.roles}.
-     */
     @Bean
-    public JwtAuthenticationConverter jwtAuthConverter() {
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(new KeycloakRoleConverter());
         return converter;

@@ -5,14 +5,18 @@ import com.aurum.core_banking.interfaces.rest.dto.request.TransferRequest;
 import com.aurum.core_banking.interfaces.rest.dto.response.TransferResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
-
+/**
+ * REST controller for money transfer operations.
+ *
+ * <p>Applies rate limiting (see {@link com.aurum.core_banking.infrastructure.security.RateLimitingInterceptor})
+ * and Drools fraud screening on every request.
+ */
 @RestController
 @RequestMapping("/api/v1/transfers")
 @RequiredArgsConstructor
@@ -21,33 +25,19 @@ public class TransferController {
     private final TransferService transferService;
 
     /**
-     * Execute a funds transfer.
-     * Only TELLER and MANAGER roles may initiate transfers.
-     * The Keycloak subject (user ID) is recorded as the performer for audit.
+     * Initiate a fund transfer between two accounts.
+     *
+     * <p>Returns {@code 201 Created} on success, or replays the original result
+     * if the {@code idempotencyKey} was already processed (also returns 201).
      */
     @PostMapping
-    @PreAuthorize("hasRole('TELLER') or hasRole('MANAGER')")
-    public ResponseEntity<TransferResponse> createTransfer(
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseEntity<TransferResponse> transfer(
             @Valid @RequestBody TransferRequest request,
             @AuthenticationPrincipal Jwt jwt) {
 
-        String performedBy = jwt.getSubject(); // Keycloak user UUID
-        TransferResponse result = transferService.transfer(request, performedBy);
-
-        return ResponseEntity
-                .created(URI.create("/api/v1/transfers/" + result.transactionId()))
-                .body(result);
-    }
-
-    /**
-     * Retrieve a transfer record by ID.
-     * Customers, tellers, managers, and auditors may read transfers.
-     */
-    @GetMapping("/{id}")
-    @PreAuthorize("hasRole('CUSTOMER') or hasRole('TELLER') " +
-                  "or hasRole('MANAGER') or hasRole('AUDITOR')")
-    public ResponseEntity<TransferResponse> getTransfer(@PathVariable String id) {
-        // TODO: implement lookup in a follow-up ticket
-        return ResponseEntity.ok().build();
+        String performedBy = jwt != null ? jwt.getSubject() : "anonymous";
+        TransferResponse response = transferService.execute(request, performedBy);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

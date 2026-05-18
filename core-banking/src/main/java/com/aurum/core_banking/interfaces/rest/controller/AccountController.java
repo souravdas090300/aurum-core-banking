@@ -1,5 +1,8 @@
 package com.aurum.core_banking.interfaces.rest.controller;
 
+import com.aurum.core_banking.infrastructure.persistence.entity.AccountEntity;
+import com.aurum.core_banking.infrastructure.persistence.repository.AccountRepository;
+import com.aurum.core_banking.common.exception.AccountNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -8,48 +11,37 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 /**
- * Account management endpoints.
+ * REST controller for account enquiry operations.
  *
- * RBAC matrix:
- * <pre>
- *   CUSTOMER → read own accounts (ownership check in service layer)
- *   TELLER   → read any account, create accounts
- *   MANAGER  → read + create + freeze accounts
- *   AUDITOR  → read-only, all accounts
- *   ADMIN    → full access including close/delete
- * </pre>
+ * <p>Write operations (opening, closing, freezing accounts) are out of scope for
+ * this prototype and would be added in subsequent iterations.
  */
 @RestController
 @RequestMapping("/api/v1/accounts")
 @RequiredArgsConstructor
 public class AccountController {
 
-    @GetMapping("/{id}")
-    @PreAuthorize("hasRole('CUSTOMER') or hasRole('TELLER') " +
-                  "or hasRole('MANAGER') or hasRole('AUDITOR')")
-    public ResponseEntity<?> getAccount(@PathVariable UUID id) {
-        // TODO: delegate to AccountService in a follow-up ticket
-        return ResponseEntity.ok().build();
+    private final AccountRepository accountRepository;
+
+    /**
+     * Retrieve account details by internal UUID.
+     */
+    @GetMapping("/{accountId}")
+    @PreAuthorize("hasAnyRole('BANKING_USER','LOAN_OFFICER','COMPLIANCE_OFFICER')")
+    public ResponseEntity<AccountEntity> getAccount(@PathVariable UUID accountId) {
+        AccountEntity account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new AccountNotFoundException(accountId));
+        return ResponseEntity.ok(account);
     }
 
-    @PostMapping
-    @PreAuthorize("hasRole('TELLER') or hasRole('MANAGER')")
-    public ResponseEntity<?> createAccount(@RequestBody Object request) {
-        // TODO: delegate to AccountService in a follow-up ticket
-        return ResponseEntity.ok().build();
-    }
-
-    @PatchMapping("/{id}/freeze")
-    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
-    public ResponseEntity<?> freezeAccount(@PathVariable UUID id) {
-        // TODO: delegate to AccountService in a follow-up ticket
-        return ResponseEntity.ok().build();
-    }
-
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> closeAccount(@PathVariable UUID id) {
-        // TODO: delegate to AccountService in a follow-up ticket
-        return ResponseEntity.noContent().build();
+    /**
+     * Retrieve account details by IBAN account number.
+     */
+    @GetMapping("/number/{accountNumber}")
+    @PreAuthorize("hasAnyRole('BANKING_USER','LOAN_OFFICER','COMPLIANCE_OFFICER')")
+    public ResponseEntity<AccountEntity> getAccountByNumber(@PathVariable String accountNumber) {
+        AccountEntity account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new AccountNotFoundException(accountNumber));
+        return ResponseEntity.ok(account);
     }
 }

@@ -1,0 +1,156 @@
+{
+  "title": "Aurum Core Banking",
+  "uid": "aurum-banking-v1",
+  "tags": ["banking", "production", "aurum"],
+  "schemaVersion": 38,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Transfer Throughput (per minute)",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "targets": [{
+        "expr": "rate(banking_transfers_success_total[1m]) * 60",
+        "legendFormat": "Transfers/min"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" } } }
+    },
+    {
+      "id": 2,
+      "title": "Transfer Processing Time — p95",
+      "type": "gauge",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "targets": [{
+        "expr": "banking_transfers_processing_time_seconds{quantile='0.95'} * 1000",
+        "legendFormat": "p95 latency"
+      }],
+      "fieldConfig": { "defaults": { "unit": "ms", "max": 5000, "thresholds": {
+        "steps": [
+          { "value": null, "color": "green" },
+          { "value": 500,  "color": "yellow" },
+          { "value": 2000, "color": "red" }
+        ]
+      }}}
+    },
+    {
+      "id": 3,
+      "title": "Fraud Blocks (last hour)",
+      "type": "stat",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "targets": [{
+        "expr": "increase(banking_transfers_blocked_total[1h])",
+        "legendFormat": "Blocked"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" },
+        "thresholds": { "steps": [
+          { "value": null, "color": "green" },
+          { "value": 1,   "color": "yellow" },
+          { "value": 5,   "color": "red" }
+        ]}
+      }}
+    },
+    {
+      "id": 4,
+      "title": "FIAU Reports Today",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "targets": [{
+        "expr": "increase(banking_compliance_fiau_reports_total[24h])",
+        "legendFormat": "FIAU Reports"
+      }]
+    },
+    {
+      "id": 5,
+      "title": "Active Transactions",
+      "type": "gauge",
+      "gridPos": { "x": 16, "y": 0, "w": 4, "h": 4 },
+      "targets": [{
+        "expr": "banking_transactions_active",
+        "legendFormat": "In-flight"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0, "max": 100 } }
+    },
+    {
+      "id": 6,
+      "title": "Pending Loan Reviews",
+      "type": "stat",
+      "gridPos": { "x": 20, "y": 0, "w": 4, "h": 4 },
+      "targets": [{
+        "expr": "banking_loans_pending_review",
+        "legendFormat": "Pending"
+      }]
+    },
+    {
+      "id": 7,
+      "title": "JVM Heap Usage %",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "jvm_memory_used_bytes{area='heap'} / jvm_memory_max_bytes{area='heap'} * 100",
+        "legendFormat": "Heap %"
+      }],
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100, "thresholds": {
+        "steps": [
+          { "value": null, "color": "green" },
+          { "value": 70,   "color": "yellow" },
+          { "value": 90,   "color": "red" }
+        ]
+      }}}
+    },
+    {
+      "id": 8,
+      "title": "HikariCP DB Connection Pool",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "hikaricp_connections_active",
+          "legendFormat": "Active connections"
+        },
+        {
+          "expr": "hikaricp_connections_max",
+          "legendFormat": "Pool max"
+        },
+        {
+          "expr": "hikaricp_connections_pending",
+          "legendFormat": "Waiting"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 9,
+      "title": "HTTP 5xx Error Rate (per minute)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "rate(http_server_requests_seconds_count{status=~'5..'}[1m]) * 60",
+        "legendFormat": "5xx/min"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "fixedColor": "red", "mode": "fixed" } } }
+    },
+    {
+      "id": 10,
+      "title": "Transfer Amount Distribution (EUR)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "banking_transfers_amount{quantile='0.50'}",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "banking_transfers_amount{quantile='0.95'}",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "banking_transfers_amount{quantile='0.99'}",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "currencyEUR" } }
+    }
+  ]
+}
