@@ -24,10 +24,10 @@
         <testcontainers.version>1.20.4</testcontainers.version>
         <cucumber.version>7.20.1</cucumber.version>
         <rest-assured.version>5.5.0</rest-assured.version>
-        <jacoco.version>0.8.12</jacoco.version>
+        <jacoco.version>0.8.14</jacoco.version>
         <sonar.version>5.0.0.4389</sonar.version>
         <bucket4j.version>8.10.1</bucket4j.version>
-        <bcprov.version>1.78.1</bcprov.version>
+        <bcprov.version>1.84</bcprov.version>
     </properties>
 
     <dependencies>
@@ -65,6 +65,8 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
+            <!-- CVE-2026-42198 fix: pinned above BOM-managed version -->
+            <version>42.7.11</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
