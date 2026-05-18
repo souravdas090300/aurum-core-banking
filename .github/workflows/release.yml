@@ -6,7 +6,7 @@ on:
       - 'v*.*.*'   # triggers on v1.0.0, v1.2.3, etc.
 
 env:
-  JAVA_VERSION: '21'
+  JAVA_VERSION: '25'
   JAVA_DISTRIBUTION: 'temurin'
 
 jobs:
