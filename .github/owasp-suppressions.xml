@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+
+    <!--
+        Suppress false positives for test-scope dependencies.
+        These are never included in the production JAR.
+    -->
+    <suppress>
+        <notes>Testcontainers — test scope only, not shipped to production</notes>
+        <packageUrl regex="true">^pkg:maven/org\.testcontainers/.*$</packageUrl>
+        <cvss base="0"/>
+    </suppress>
+
+    <suppress>
+        <notes>H2 in-memory DB — test scope only, not in production classpath</notes>
+        <packageUrl regex="true">^pkg:maven/com\.h2database/h2@.*$</packageUrl>
+        <cvss base="0"/>
+    </suppress>
+
+    <suppress>
+        <notes>REST-assured — test scope only</notes>
+        <packageUrl regex="true">^pkg:maven/io\.rest-assured/.*$</packageUrl>
+        <cvss base="0"/>
+    </suppress>
+
+    <!--
+        Template for suppressing a specific CVE when it is a confirmed false positive.
+        Uncomment and fill in after reviewing the OWASP report.
+
+        <suppress>
+            <notes>
+                CVE-YYYY-XXXXX — confirmed false positive: our usage pattern does not
+                invoke the vulnerable code path. Reference: [link to advisory]
+            </notes>
+            <cve>CVE-YYYY-XXXXX</cve>
+        </suppress>
+    -->
+
+</suppressions>

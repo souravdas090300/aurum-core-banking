@@ -1,0 +1,65 @@
+package com.aurum.rules;
+
+import com.aurum.core_banking.domain.rules.CustomerFact;
+import com.aurum.core_banking.domain.rules.TransactionFact;
+
+// ═══════════════════════════════════════════════════
+//  AURUM CORE BANKING — AML & Sanctions Screening
+//  OFAC SDN List + EU Consolidated Sanctions
+// ═══════════════════════════════════════════════════
+
+// ── Rule 1: PEP — Block without Enhanced Due Diligence ──
+rule "PEP Customer — Block Until EDD Complete"
+    salience 100
+when
+    $c : CustomerFact(
+        isPep == true,
+        sanctionsMatch == null
+    )
+    $tx : TransactionFact(
+        fromAccountId.toString() == $c.getCustomerId()
+    )
+then
+    $tx.setBlocked(true);
+    $tx.setBlockReason("PEP customer requires Enhanced Due Diligence approval");
+    $tx.getFraudFlags().add("PEP_EDD_REQUIRED");
+    $c.setAmlAlert(true);
+    update($tx);
+    update($c);
+end
+
+// ── Rule 2: Sanctions Match — Hard Block ──
+rule "Sanctions Match — Immediate Block"
+    salience 200
+when
+    $c : CustomerFact(
+        sanctionsMatch != null,
+        sanctionsMatch != ""
+    )
+    $tx : TransactionFact(
+        fromAccountId.toString() == $c.getCustomerId()
+    )
+then
+    $tx.setBlocked(true);
+    $tx.setBlockReason("OFAC/EU Sanctions match: " + $c.getSanctionsMatch());
+    $tx.getFraudFlags().add("SANCTIONS_MATCH");
+    $c.setAmlAlert(true);
+    update($tx);
+    update($c);
+end
+
+// ── Rule 3: High Risk Score Block ──
+rule "High Customer Risk Score — Block and Alert"
+    salience 90
+when
+    $c : CustomerFact(riskScore > 80)
+    $tx : TransactionFact(
+        amount > 500,
+        fromAccountId.toString() == $c.getCustomerId()
+    )
+then
+    $tx.setBlocked(true);
+    $tx.setBlockReason("Customer risk score too high: " + $c.getRiskScore());
+    $tx.getFraudFlags().add("HIGH_RISK_SCORE");
+    update($tx);
+end

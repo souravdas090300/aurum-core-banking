@@ -1,0 +1,90 @@
+# Production profile — overrides defaults in application.yml
+# Loaded when: -Dspring.profiles.active=prod  OR  SPRING_PROFILES_ACTIVE=prod
+
+spring:
+
+  # ── Database ──────────────────────────────────────────────────────────────
+  datasource:
+    url: jdbc:postgresql://localhost:5432/banking_db
+    username: banking_user
+    password: ${DB_PASSWORD}           # injected from /opt/aurum/.env
+    hikari:
+      pool-name: AurumHikariPool
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000        # 30 s — fail fast rather than queue
+      idle-timeout: 600000             # 10 min
+      max-lifetime: 1800000            # 30 min (< server wait_timeout)
+      leak-detection-threshold: 60000  # warn if connection held > 60 s
+      connection-test-query: SELECT 1
+
+  jpa:
+    show-sql: false                    # never log SQL in production
+    open-in-view: false
+    properties:
+      hibernate:
+        generate_statistics: false
+        format_sql: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: false         # schema must be clean in prod
+
+  # ── Security / JWT ────────────────────────────────────────────────────────
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI}
+
+# ── Server ────────────────────────────────────────────────────────────────
+server:
+  port: 8080
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/plain
+    min-response-size: 1024
+  http2:
+    enabled: true
+  shutdown: graceful                   # drain in-flight requests before stopping
+  error:
+    include-stacktrace: never          # never expose stack traces externally
+    include-message: never
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+# ── Actuator ─────────────────────────────────────────────────────────────
+management:
+  server:
+    port: 8081                         # management on a separate internal port
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: never              # no internal details on the public port
+      probes:
+        enabled: true                  # /actuator/health/liveness + /readiness
+  metrics:
+    tags:
+      application: aurum-core-banking
+      environment: production
+
+# ── Logging ──────────────────────────────────────────────────────────────
+logging:
+  level:
+    root: WARN
+    com.aurum.core_banking: INFO
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.flywaydb: INFO
+    com.zaxxer.hikari: WARN
+  pattern:
+    # Structured JSON pattern — shipped to centralised log aggregator
+    console: '{"timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%level","thread":"%thread","logger":"%logger{36}","message":"%message","exception":"%ex{full}"}%n'
+  file:
+    name: /opt/aurum/logs/aurum-banking.log

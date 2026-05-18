@@ -1,0 +1,79 @@
+name: 🏷️ Aurum Banking — Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'   # triggers on v1.0.0, v1.2.3, etc.
+
+env:
+  JAVA_VERSION: '21'
+  JAVA_DISTRIBUTION: 'temurin'
+
+jobs:
+
+  release:
+    name: 📋 Create GitHub Release
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: core-banking
+
+    permissions:
+      contents: write   # required to create the GitHub Release
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for changelog generation
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      - name: Build release JAR
+        run: mvn package -DskipTests --no-transfer-progress
+
+      - name: Generate changelog from git log
+        id: changelog
+        run: |
+          cd ..   # operate from repo root for git commands
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "${PREV_TAG}" ]; then
+            CHANGELOG=$(git log "${PREV_TAG}..HEAD" \
+              --pretty=format:"- %s (%h)" \
+              --no-merges)
+          else
+            CHANGELOG="Initial release"
+          fi
+          {
+            echo "changelog<<EOF"
+            echo "${CHANGELOG}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Aurum Core Banking ${{ github.ref_name }}"
+          body: |
+            ## 🏦 Aurum Core Banking ${{ github.ref_name }}
+
+            ### Changes
+            ${{ steps.changelog.outputs.changelog }}
+
+            ### Deployment
+            This release is automatically deployed to production
+            after all CI checks pass.
+
+            ### Tech Stack
+            - Java 21 + Spring Boot 4.0.x
+            - Drools 9.44 (RHPAM) fraud detection + AML screening
+            - Keycloak OAuth2/OIDC JWT with RBAC
+            - PostgreSQL 16 + Flyway migrations
+            - Testcontainers · Cucumber BDD · REST-assured · JaCoCo · SonarQube
+          files: core-banking/target/*.jar
+          draft: false
+          prerelease: false

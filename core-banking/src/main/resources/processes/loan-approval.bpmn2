@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:tns="http://www.jboss.org/drools"
+             targetNamespace="http://aurum.banking/processes"
+             id="LoanApproval">
+
+  <process id="loan-approval" name="Loan Approval Process"
+           isExecutable="true" tns:packageName="com.aurum">
+
+    <!-- START -->
+    <startEvent id="start" name="Loan Application Submitted">
+      <outgoing>flow1</outgoing>
+    </startEvent>
+
+    <!-- CREDIT SCORE CHECK (Drools) -->
+    <serviceTask id="creditScoreCheck"
+                 name="Credit Score Evaluation"
+                 tns:serviceimpl="Java"
+                 tns:serviceinterface="com.aurum.core_banking.application.service.CreditScoringService"
+                 tns:serviceoperation="evaluate">
+      <incoming>flow1</incoming>
+      <outgoing>flow2</outgoing>
+    </serviceTask>
+
+    <!-- GATEWAY: Route by decision -->
+    <exclusiveGateway id="decisionGateway" name="Loan Decision?">
+      <incoming>flow2</incoming>
+      <outgoing>flowApproved</outgoing>
+      <outgoing>flowReview</outgoing>
+      <outgoing>flowDeclined</outgoing>
+    </exclusiveGateway>
+
+    <!-- AUTO APPROVED PATH -->
+    <serviceTask id="disburse" name="Disburse Loan Funds">
+      <incoming>flowApproved</incoming>
+      <outgoing>flow5</outgoing>
+    </serviceTask>
+
+    <!-- MANUAL REVIEW PATH — Human Task -->
+    <userTask id="manualReview" name="Loan Officer Review"
+              tns:taskName="ReviewLoanApplication">
+      <documentation>
+        Loan officer must review borderline application.
+        SLA: 48 hours. Escalate to manager if no action.
+      </documentation>
+      <incoming>flowReview</incoming>
+      <outgoing>flowAfterReview</outgoing>
+      <!-- SLA Timer: escalate after 48h -->
+      <boundaryEvent id="slaTimer" attachedToRef="manualReview"
+                     cancelActivity="false">
+        <timerEventDefinition>
+          <timeDuration>PT48H</timeDuration>
+        </timerEventDefinition>
+        <outgoing>flowEscalate</outgoing>
+      </boundaryEvent>
+    </userTask>
+
+    <!-- ESCALATION -->
+    <userTask id="managerApproval" name="Manager Escalation Review"
+              tns:taskName="ManagerLoanReview">
+      <incoming>flowEscalate</incoming>
+      <outgoing>flowAfterEscalation</outgoing>
+    </userTask>
+
+    <!-- NOTIFY CUSTOMER -->
+    <serviceTask id="notify" name="Send Decision Notification">
+      <incoming>flow5</incoming>
+      <incoming>flowAfterReview</incoming>
+      <incoming>flowAfterEscalation</incoming>
+      <incoming>flowDeclined</incoming>
+      <outgoing>flow6</outgoing>
+    </serviceTask>
+
+    <!-- END -->
+    <endEvent id="end" name="Process Complete">
+      <incoming>flow6</incoming>
+    </endEvent>
+
+    <!-- SEQUENCE FLOWS with conditions -->
+    <sequenceFlow id="flow1" sourceRef="start" targetRef="creditScoreCheck"/>
+    <sequenceFlow id="flow2" sourceRef="creditScoreCheck" targetRef="decisionGateway"/>
+    <sequenceFlow id="flowApproved" sourceRef="decisionGateway" targetRef="disburse">
+      <conditionExpression>#{loanDecision == 'APPROVED'}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flowReview" sourceRef="decisionGateway" targetRef="manualReview">
+      <conditionExpression>#{loanDecision == 'REVIEW'}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flowDeclined" sourceRef="decisionGateway" targetRef="notify">
+      <conditionExpression>#{loanDecision == 'DECLINED'}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow5" sourceRef="disburse" targetRef="notify"/>
+    <sequenceFlow id="flowAfterReview" sourceRef="manualReview" targetRef="notify"/>
+    <sequenceFlow id="flowEscalate" sourceRef="slaTimer" targetRef="managerApproval"/>
+    <sequenceFlow id="flowAfterEscalation" sourceRef="managerApproval" targetRef="notify"/>
+    <sequenceFlow id="flow6" sourceRef="notify" targetRef="end"/>
+
+  </process>
+</definitions>
