@@ -1,0 +1,6 @@
+{
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.home": "C:\\Program Files\\Eclipse Adoptium\\jdk-21.0.10.7-hotspot",
+  "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx1G -Xms100m -javaagent:C:\\Users\\dasau\\.m2\\repository\\org\\projectlombok\\lombok\\1.18.44\\lombok-1.18.44.jar",
+  "maven.executable.path": "C:\\Users\\dasau\\.m2\\wrapper\\dists\\apache-maven-3.9.14\\ed7edd442f634ac1c1ef5ba2b61b6d690b5221091f1a8e1123f5fadcc967520d\\bin\\mvn.cmd"
+}
