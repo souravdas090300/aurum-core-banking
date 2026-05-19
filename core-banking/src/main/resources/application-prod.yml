@@ -23,12 +23,8 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        generate_statistics: false
-        format_sql: false
-
-  flyway:
-    enabled: true
-    baseline-on-migrate: false         # schema must be clean in prod
+        "[generate_statistics]": false
+        "[format_sql]": false
 
   # ── Security / JWT ────────────────────────────────────────────────────────
   security:
@@ -36,6 +32,14 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI}
+
+  # ── Error Handling / Lifecycle ────────────────────────────────────────────
+  web:
+    error:
+      include-stacktrace: never          # never expose stack traces externally
+      include-message: never
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
 
 # ── Server ────────────────────────────────────────────────────────────────
 server:
@@ -47,13 +51,6 @@ server:
   http2:
     enabled: true
   shutdown: graceful                   # drain in-flight requests before stopping
-  error:
-    include-stacktrace: never          # never expose stack traces externally
-    include-message: never
-
-spring:
-  lifecycle:
-    timeout-per-shutdown-phase: 30s
 
 # ── Actuator ─────────────────────────────────────────────────────────────
 management:
@@ -78,11 +75,11 @@ management:
 logging:
   level:
     root: WARN
-    com.aurum.core_banking: INFO
-    org.springframework.security: WARN
-    org.springframework.web: WARN
-    org.flywaydb: INFO
-    com.zaxxer.hikari: WARN
+    "[com.aurum.core_banking]": INFO
+    "[org.springframework.security]": WARN
+    "[org.springframework.web]": WARN
+    "[org.flywaydb]": INFO
+    "[com.zaxxer.hikari]": WARN
   pattern:
     # Structured JSON pattern — shipped to centralised log aggregator
     console: '{"timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%level","thread":"%thread","logger":"%logger{36}","message":"%message","exception":"%ex{full}"}%n'
