@@ -2,9 +2,6 @@ package com.aurum.core_banking.domain.rules;
 
 import lombok.*;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Drools working-memory fact for customer KYC, AML and credit-scoring rules.
  *

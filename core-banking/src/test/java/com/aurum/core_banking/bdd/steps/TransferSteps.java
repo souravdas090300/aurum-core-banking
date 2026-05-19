@@ -1,13 +1,10 @@
 package com.aurum.core_banking.bdd.steps;
 
-import com.aurum.core_banking.application.service.FraudDetectionService;
-import com.aurum.core_banking.application.service.FraudResult;
-import com.aurum.core_banking.domain.rules.CustomerFact;
 import com.aurum.core_banking.application.service.CreditScoringService;
+import com.aurum.core_banking.domain.rules.CustomerFact;
 import com.aurum.core_banking.domain.rules.TransactionFact;
 import com.aurum.core_banking.infrastructure.persistence.entity.AccountEntity;
 import com.aurum.core_banking.infrastructure.persistence.repository.AccountRepository;
-import com.aurum.core_banking.interfaces.rest.dto.request.LoanApplicationRequest;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.*;
@@ -16,7 +13,6 @@ import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,7 +37,6 @@ public class TransferSteps {
     // State shared between steps in one scenario
     private final Map<String, AccountEntity> accountMap = new HashMap<>();
     private       String                     lastError;
-    private       FraudResult                fraudResult;
     private       TransactionFact            fraudFact;
     private       String                     creditDecision;
 
@@ -49,7 +44,6 @@ public class TransferSteps {
     public void before() {
         accountMap.clear();
         lastError    = null;
-        fraudResult  = null;
         fraudFact    = null;
         creditDecision = null;
     }

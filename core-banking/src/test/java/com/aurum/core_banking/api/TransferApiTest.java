@@ -166,10 +166,6 @@ class TransferApiTest extends BaseIntegrationTest {
         assertThat(txId1).isEqualTo(txId2);
     }
 
-    // Import for assertThat from AssertJ (available via spring-boot-starter-test)
-    private static <T> void assertThat(T actual) {
-        org.assertj.core.api.Assertions.assertThat(actual);
-    }
     private static org.assertj.core.api.AbstractStringAssert<?> assertThat(String actual) {
         return org.assertj.core.api.Assertions.assertThat(actual);
     }

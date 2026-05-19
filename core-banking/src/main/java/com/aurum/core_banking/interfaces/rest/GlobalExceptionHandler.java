@@ -31,7 +31,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                         CurrencyMismatchException.class,
                         TransactionBlockedException.class})
     public ResponseEntity<Map<String, Object>> handleUnprocessable(RuntimeException ex) {
-        return problem(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        return problem(HttpStatusCode.valueOf(422), ex.getMessage());
     }
 
     @Override
@@ -60,10 +60,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
     }
 
-    private ResponseEntity<Map<String, Object>> problem(HttpStatus status, String detail) {
-        return ResponseEntity.status(status).body(Map.of(
-                "status",    status.value(),
-                "error",     status.getReasonPhrase(),
+    private ResponseEntity<Map<String, Object>> problem(HttpStatusCode statusCode, String detail) {
+        HttpStatus status = HttpStatus.resolve(statusCode.value());
+        String phrase = (status != null) ? status.getReasonPhrase() : String.valueOf(statusCode.value());
+        return ResponseEntity.status(statusCode).body(Map.of(
+                "status",    statusCode.value(),
+                "error",     phrase,
                 "detail",    detail,
                 "timestamp", Instant.now().toString()));
     }

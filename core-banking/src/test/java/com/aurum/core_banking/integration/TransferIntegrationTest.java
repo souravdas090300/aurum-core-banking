@@ -6,6 +6,7 @@ import com.aurum.core_banking.infrastructure.persistence.repository.AccountRepos
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClient;
@@ -65,13 +66,13 @@ class TransferIntegrationTest extends BaseIntegrationTest {
         accountRepository.deleteAll();
     }
 
-    private ResponseEntity<Map> post(String path, Map<String, Object> body) {
+    private ResponseEntity<Map<String, Object>> post(String path, Map<String, Object> body) {
         try {
             return client.post().uri(path)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
-                    .toEntity(Map.class);
+                    .toEntity(new ParameterizedTypeReference<Map<String, Object>>() {});
         } catch (org.springframework.web.client.HttpClientErrorException ex) {
             return ResponseEntity.status(ex.getStatusCode()).body(null);
         }
@@ -88,7 +89,7 @@ class TransferIntegrationTest extends BaseIntegrationTest {
                 "reference",      "Integration test transfer",
                 "idempotencyKey", "integ-test-" + UUID.randomUUID());
 
-        ResponseEntity<Map> response = post("/api/v1/transfers", body);
+        ResponseEntity<Map<String, Object>> response = post("/api/v1/transfers", body);
         assertThat(response.getStatusCode().value()).isIn(401, 403);
     }
 
@@ -105,8 +106,8 @@ class TransferIntegrationTest extends BaseIntegrationTest {
     @DisplayName("Actuator health endpoint is accessible without authentication")
     void actuatorHealth_isPublic() {
         try {
-            ResponseEntity<Map> response = client.get().uri("/actuator/health")
-                    .retrieve().toEntity(Map.class);
+            ResponseEntity<Map<String, Object>> response = client.get().uri("/actuator/health")
+                    .retrieve().toEntity(new ParameterizedTypeReference<Map<String, Object>>() {});
             assertThat(response.getStatusCode().value()).isIn(200, 503);
         } catch (org.springframework.web.client.HttpClientErrorException ex) {
             // 401/403 would be unexpected for actuator/health — fail clearly
@@ -117,7 +118,7 @@ class TransferIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("POST transfer without content-type returns 4xx")
     void emptyBody_returns4xx() {
-        ResponseEntity<Map> response = post("/api/v1/transfers", Map.of());
+        ResponseEntity<Map<String, Object>> response = post("/api/v1/transfers", Map.of());
         assertThat(response.getStatusCode().value()).isIn(400, 401, 403, 415, 422);
     }
 }

@@ -15,8 +15,8 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-        default_schema: public
+        "[format_sql]": true
+        "[default_schema]": public
 
   flyway:
     enabled: true
@@ -41,16 +41,15 @@ management:
   endpoint:
     health:
       show-details: when-authorized
-    prometheus:
-      enabled: true
-  metrics:
-    export:
-      prometheus:
+  prometheus:
+    metrics:
+      export:
         enabled: true
+  metrics:
     distribution:
       percentiles-histogram:
-        banking.transfers.processing.time: true
-        banking.fraud.evaluation.time: true
+        "[banking.transfers.processing.time]": true
+        "[banking.fraud.evaluation.time]": true
     tags:
       app: aurum-core-banking
 
@@ -66,6 +65,6 @@ rate-limit:
 
 logging:
   level:
-    com.aurum: INFO
-    org.drools: WARN
-    org.springframework.security: WARN
+    "[com.aurum]": INFO
+    "[org.drools]": WARN
+    "[org.springframework.security]": WARN
