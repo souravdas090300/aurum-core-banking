@@ -1,7 +1,11 @@
 # Read Me First
-The following was discovered as part of building this project:
 
-* The original package name 'com.aurum.core-banking' is invalid and this project uses 'com.aurum.core_banking' instead.
+## Project Structure
+This project follows the standardized Aurum Core Banking naming conventions:
+* Maven artifactId: `aurum-core-banking`
+* Java package: `com.aurum.corebanking`
+* Database: `banking_db` (user: `banking_user`)
+* Keycloak realm: `banking` (client: `banking-api`)
 
 # Getting Started
 

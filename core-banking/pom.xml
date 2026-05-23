@@ -13,7 +13,7 @@
     </parent>
 
     <groupId>com.aurum</groupId>
-    <artifactId>core-banking</artifactId>
+    <artifactId>aurum-core-banking</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <name>Aurum Core Banking</name>
     <description>Production-grade core banking system — Drools, jBPM stub, Testcontainers, Cucumber BDD</description>
@@ -94,6 +94,10 @@
             <groupId>com.bucket4j</groupId>
             <artifactId>bucket4j-core</artifactId>
             <version>${bucket4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
         </dependency>
 
         <!-- ── Encryption (Bouncy Castle) ── -->

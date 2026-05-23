@@ -37,6 +37,16 @@ spring:
         jwt:
           jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI}
 
+  # ── Lifecycle ────────────────────────────────────────────────────────────
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  # ── Web / Error Handling ─────────────────────────────────────────────────
+  web:
+    error:
+      include-stacktrace: never        # never expose stack traces externally
+      include-message: never
+
 # ── Server ────────────────────────────────────────────────────────────────
 server:
   port: 8080
@@ -47,13 +57,6 @@ server:
   http2:
     enabled: true
   shutdown: graceful                   # drain in-flight requests before stopping
-  error:
-    include-stacktrace: never          # never expose stack traces externally
-    include-message: never
-
-spring:
-  lifecycle:
-    timeout-per-shutdown-phase: 30s
 
 # ── Actuator ─────────────────────────────────────────────────────────────
 management:
@@ -78,7 +81,7 @@ management:
 logging:
   level:
     root: WARN
-    com.aurum.core_banking: INFO
+    com.aurum.corebanking: INFO
     org.springframework.security: WARN
     org.springframework.web: WARN
     org.flywaydb: INFO

@@ -3,9 +3,9 @@ spring:
     name: aurum-core-banking
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/aurum_banking
-    username: aurum
-    password: ${DB_PASSWORD:aurum_secret}
+    url: jdbc:postgresql://localhost:5432/banking_db
+    username: banking_user
+    password: ${DB_PASSWORD:banking_secret}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -27,8 +27,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8080/realms/aurum/protocol/openid-connect/certs}
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/aurum}
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8180/realms/banking/protocol/openid-connect/certs}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/banking}
 
 encryption:
   secret-key: ${AES_SECRET_KEY:0123456789abcdef0123456789abcdef}  # 32-byte hex key
@@ -50,6 +50,6 @@ rate-limit:
 
 logging:
   level:
-    com.aurum: INFO
+    com.aurum.corebanking: INFO
     org.drools: WARN
     org.springframework.security: WARN

@@ -16,7 +16,7 @@
     <serviceTask id="creditScoreCheck"
                  name="Credit Score Evaluation"
                  tns:serviceimpl="Java"
-                 tns:serviceinterface="com.aurum.core_banking.application.service.CreditScoringService"
+                 tns:serviceinterface="com.aurum.corebanking.application.service.CreditScoringService"
                  tns:serviceoperation="evaluate">
       <incoming>flow1</incoming>
       <outgoing>flow2</outgoing>

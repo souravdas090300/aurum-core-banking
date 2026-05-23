@@ -1,7 +1,7 @@
 package com.aurum.rules;
 
-import com.aurum.core_banking.domain.rules.CustomerFact;
-import com.aurum.core_banking.domain.rules.TransactionFact;
+import com.aurum.corebanking.domain.rules.CustomerFact;
+import com.aurum.corebanking.domain.rules.TransactionFact;
 
 // ═══════════════════════════════════════════════════
 //  AURUM CORE BANKING — AML & Sanctions Screening

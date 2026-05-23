@@ -1,6 +1,6 @@
 package com.aurum.rules;
 
-import com.aurum.core_banking.domain.rules.CustomerFact;
+import com.aurum.corebanking.domain.rules.CustomerFact;
 
 // ═══════════════════════════════════════════════════
 //  AURUM CORE BANKING — Credit Scoring Rules
