@@ -8,7 +8,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.6</version>
+        <version>3.5.14</version>
         <relativePath/>
     </parent>
 
@@ -19,9 +19,9 @@
     <description>Production-grade core banking system — Drools, jBPM stub, Testcontainers, Cucumber BDD</description>
 
     <properties>
-        <java.version>25</java.version>
+        <java.version>21</java.version>
         <drools.version>9.44.0.Final</drools.version>
-        <testcontainers.version>1.20.4</testcontainers.version>
+        <testcontainers.version>1.20.5</testcontainers.version>
         <cucumber.version>7.20.1</cucumber.version>
         <rest-assured.version>5.5.0</rest-assured.version>
         <jacoco.version>0.8.14</jacoco.version>
@@ -56,10 +56,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-health</artifactId>
-        </dependency>
 
         <!-- ── Database ── -->
         <dependency>
@@ -72,10 +68,6 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
         <!-- ── Drools 9 Rules Engine ── -->
@@ -216,11 +208,11 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- H2 for lightweight unit tests -->
+        <!-- H2 in-memory database (for development and tests) -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <scope>test</scope>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- JUnit Platform Suite (for Cucumber runner @Suite, @IncludeEngines) -->
@@ -246,7 +238,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Explicit Lombok annotation processor path (required for JDK 25) -->
+            <!-- Lombok annotation processor path (compatible with JDK 21) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

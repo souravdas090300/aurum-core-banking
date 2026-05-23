@@ -17,6 +17,11 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
     Optional<TransactionEntity> findByIdempotencyKey(String idempotencyKey);
 
     /**
+     * Find transactions by account ID (either from or to).
+     */
+    List<TransactionEntity> findByFromAccountIdOrToAccountId(UUID fromAccountId, UUID toAccountId);
+
+    /**
      * Count transactions initiated from an account after a given timestamp.
      * Used by fraud detection to compute velocity (transactions per hour).
      */

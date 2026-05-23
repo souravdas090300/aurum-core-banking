@@ -1,49 +1,26 @@
 package com.aurum.core_banking;
 
-import org.junit.jupiter.api.BeforeAll;
+import com.aurum.core_banking.config.TestSecurityConfig;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Base class for all integration tests.
  *
- * <p>Spins up a shared PostgreSQL 16 Testcontainer with container reuse enabled —
- * the same container is reused across all test classes in a single Surefire JVM,
- * dramatically reducing total test time.
+ * <p>Uses H2 in-memory database with PostgreSQL compatibility mode.
+ * Database schema is created automatically via JPA's ddl-auto=create-drop.
  *
- * <p>Flyway migrations run automatically on the shared container DB; each test that
- * modifies data must clean up after itself (or use @Transactional rollback).
+ * <p>Each test runs in isolation with a fresh H2 database instance.
+ * No Docker/Testcontainers required - tests run fast and reliably on any platform.
  *
- * <p>Tests are skipped automatically when Docker is not available in the environment.
+ * <p>Security is configured to allow all requests by default.
+ * Use @WithMockUser on test methods to simulate authenticated users.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers(disabledWithoutDocker = true)
 @ActiveProfiles("test")
+@Import(TestSecurityConfig.class)
 public abstract class BaseIntegrationTest {
-
-    @SuppressWarnings("resource")
-    @Container
-    static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:16-alpine")
-                    .withDatabaseName("aurum_test")
-                    .withUsername("test")
-                    .withPassword("test")
-                    .withReuse(true);
-
-    @BeforeAll
-    static void startContainer() {
-        POSTGRES.start();
-    }
-
-    @DynamicPropertySource
-    static void registerDataSourceProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url",      POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+    // H2 database is configured in application-test.yml
+    // Security is configured in TestSecurityConfig
 }

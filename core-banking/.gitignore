@@ -31,3 +31,29 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Sensitive Data & Environment Variables ###
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.p12
+*.jks
+*.keystore
+**/secrets/
+**/credentials/
+
+### Logs ###
+*.log
+logs/
+
+### OS Files ###
+.DS_Store
+Thumbs.db
+
+### Backup Files ###
+*.bak
+*.swp
+*.swo
+*~

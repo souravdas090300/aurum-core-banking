@@ -1,6 +1,7 @@
 package com.aurum.core_banking.infrastructure.security;
 
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -29,7 +30,7 @@ public class KeycloakRoleConverter implements Converter<Jwt, Collection<GrantedA
 
     @Override
     @SuppressWarnings("unchecked")
-    public Collection<GrantedAuthority> convert(Jwt jwt) {
+    public Collection<GrantedAuthority> convert(@NonNull Jwt jwt) {
         Map<String, Object> realmAccess =
                 (Map<String, Object>) jwt.getClaims().get("realm_access");
 
