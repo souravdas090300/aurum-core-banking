@@ -60,8 +60,6 @@ server:
 
 # ── Actuator ─────────────────────────────────────────────────────────────
 management:
-  server:
-    port: 8081                         # management on a separate internal port
   endpoints:
     web:
       base-path: /actuator

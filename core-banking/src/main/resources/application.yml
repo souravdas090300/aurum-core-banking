@@ -3,14 +3,14 @@ spring:
     name: aurum-core-banking
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/banking_db
+    url: jdbc:postgresql://localhost:5433/banking_db
     username: banking_user
-    password: ${DB_PASSWORD:banking_secret}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:

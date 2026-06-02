@@ -1,0 +1,68 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: banking-postgres
+    environment:
+      POSTGRES_DB: banking_db
+      POSTGRES_USER: banking_user
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banking_user -d banking_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - banking-network
+
+  # Keycloak OAuth2 Server
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.0
+    container_name: banking-keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8080
+      KC_HEALTH_ENABLED: true
+    ports:
+      - "8080:8080"  # Keycloak on port 8080 as you requested
+    command: start-dev
+    networks:
+      - banking-network
+
+  # Aurum Core Banking Application
+  banking-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: banking-app
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: banking_user
+      SPRING_DATASOURCE_PASSWORD: postgres
+      DB_PASSWORD: postgres
+      AES_SECRET_KEY: C108747305076A1CA0346EC46E2EB1BA2C346F954C6F3FB8E53CF11DE4C6A92C
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/banking/protocol/openid-connect/certs
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/banking
+    ports:
+      - "8081:8080"  # Banking app on port 8081 (to avoid conflict with Keycloak)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started  # Just wait for keycloak to start, not for health check
+    networks:
+      - banking-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  banking-network:
+    driver: bridge

@@ -34,7 +34,27 @@ class FraudDetectionRulesTest {
 
     @BeforeEach
     void setUp() {
-        session = kieContainer.newKieSession();
+        // Try to create session with explicit name, fall back to default if not found
+        try {
+            session = kieContainer.newKieSession("ksession-rules");
+        } catch (Exception e) {
+            // If named session not found, try getting the first available session
+            var kieBaseNames = kieContainer.getKieBaseNames();
+            if (kieBaseNames != null && !kieBaseNames.isEmpty()) {
+                String kieBaseName = kieBaseNames.iterator().next();
+                var kieSessionNames = kieContainer.getKieSessionNamesInKieBase(kieBaseName);
+                if (kieSessionNames != null && !kieSessionNames.isEmpty()) {
+                    String sessionName = kieSessionNames.iterator().next();
+                    session = kieContainer.newKieSession(sessionName);
+                }
+            }
+        }
+        
+        if (session == null) {
+            throw new IllegalStateException(
+                "Could not create KieSession. Available KieBases: " + kieContainer.getKieBaseNames()
+            );
+        }
     }
 
     @AfterEach

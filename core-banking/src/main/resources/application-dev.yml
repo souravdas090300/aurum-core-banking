@@ -1,0 +1,12 @@
+spring:
+  # OAuth2 disabled in dev mode - DevSecurityConfig provides permitAll() access
+  
+  # Keep datasource from main application.yml
+  # Override only if needed for local PostgreSQL credentials
+  
+logging:
+  level:
+    com.aurum.corebanking: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
