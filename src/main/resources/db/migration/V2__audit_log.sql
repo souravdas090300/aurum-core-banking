@@ -1,0 +1,7 @@
+-- ============================================================
+-- REMOVED - Audit Log Table
+-- V2__audit_log.sql
+-- ============================================================
+-- This migration has been removed to resolve conflict with V1__init_schema.sql
+-- which already contains the audit_log table definition.
+-- The audit_log table from V1 will be used instead.

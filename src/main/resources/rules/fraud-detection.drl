@@ -1,0 +1,93 @@
+package com.aurum.rules;
+
+import com.aurum.corebanking.domain.rules.TransactionFact;
+
+/**
+ * Fraud detection rules.
+ *
+ * Field access notes (must match TransactionFact getters exactly):
+ *   offHours   → boolean field → isOffHours()   ← Drools uses "is" prefix for boolean
+ *   fiauReport → boolean field → isFiauReport() ← written by rules
+ *   blocked    → boolean field → isBlocked()    ← written by rules
+ *
+ * In DRL condition blocks, Drools resolves "offHours" to isOffHours() automatically
+ * for boolean fields. In consequence blocks, use the setter directly: setOffHours().
+ *
+ * Salience order (highest fires first):
+ *   100 FIAU mandatory report (≥ €10,000)
+ *    95 PEP transaction flag
+ *    90 Velocity breach (> 5/hour)
+ *    85 Sanctioned jurisdiction hard block
+ *    80 Off-hours large transfer (≥ €5,000, 22:00–06:00)
+ *    70 Round-number structuring (≥ €5,000, round amount)
+ */
+
+// ── Rule 1: FIAU mandatory report — any transaction ≥ €10,000 ────────────────
+rule "FIAU Mandatory Report"
+    salience 100
+    no-loop
+when
+    $tx : TransactionFact( amount >= 10000 )
+then
+    $tx.setFiauReport( true );
+    $tx.getFraudFlags().add( "FIAU_REPORT_REQUIRED" );
+    update( $tx );
+end
+
+// ── Rule 2: Velocity breach — more than 5 transactions in last hour ───────────
+rule "Velocity Breach — Block"
+    salience 90
+    no-loop
+when
+    $tx : TransactionFact( transactionsLastHour > 5, !blocked )
+then
+    $tx.setBlocked( true );
+    $tx.setBlockReason( "VELOCITY_BREACH" );
+    $tx.getFraudFlags().add( "VELOCITY_BREACH" );
+    update( $tx );
+end
+
+// ── Rule 3: Sanctioned jurisdiction — hard block ──────────────────────────────
+rule "Sanctioned Jurisdiction — Hard Block"
+    salience 85
+    no-loop
+when
+    $tx : TransactionFact(
+        toCountry in ( "KP", "IR", "SY", "CU", "VE" ),
+        !blocked
+    )
+then
+    $tx.setBlocked( true );
+    $tx.setBlockReason( "SANCTIONED_JURISDICTION: " + $tx.getToCountry() );
+    $tx.getFraudFlags().add( "SANCTIONED_JURISDICTION" );
+    update( $tx );
+end
+
+// ── Rule 4: Off-hours large transfer ─────────────────────────────────────────
+rule "Off-Hours Large Transfer"
+    salience 80
+    no-loop
+when
+    $tx : TransactionFact(
+        offHours == true,
+        amount >= 5000,
+        !blocked
+    )
+then
+    $tx.getFraudFlags().add( "OFF_HOURS_LARGE_TRANSFER" );
+    update( $tx );
+end
+
+// ── Rule 5: Round-number structuring ─────────────────────────────────────────
+rule "Round Number Structuring"
+    salience 70
+    no-loop
+when
+    $tx : TransactionFact(
+        amount >= 5000,
+        amount.remainder( new java.math.BigDecimal("1000") ).compareTo( java.math.BigDecimal.ZERO ) == 0
+    )
+then
+    $tx.getFraudFlags().add( "ROUND_NUMBER_STRUCTURING" );
+    update( $tx );
+end

@@ -1,0 +1,59 @@
+package com.aurum.rules;
+
+import com.aurum.corebanking.domain.rules.CustomerFact;
+import com.aurum.corebanking.domain.rules.TransactionFact;
+
+/**
+ * AML screening rules.
+ *
+ * Field access notes (must match CustomerFact getters exactly):
+ *   sanctionsMatch  → String field  → getSanctionsMatch()  ← Drools can call this
+ *   pep             → boolean field → isPep()              ← Drools can call this
+ *   amlAlert        → boolean field → isAmlAlert()         ← written by these rules
+ */
+
+// ── Rule 1: Sanctions match — immediate hard block ────────────────────────────
+rule "Sanctions Match — Immediate Block"
+    salience 200
+    no-loop
+when
+    $c  : CustomerFact( sanctionsMatch != null )
+    $tx : TransactionFact( !blocked )
+then
+    $tx.setBlocked( true );
+    $tx.setBlockReason( "SANCTIONS_MATCH: " + $c.getSanctionsMatch() );
+    $tx.getFraudFlags().add( "SANCTIONS_MATCH" );
+    $c.setAmlAlert( true );
+    update( $tx );
+    update( $c );
+end
+
+// ── Rule 2: PEP without EDD — block until enhanced due diligence complete ─────
+rule "PEP Customer — Block Until EDD Complete"
+    salience 100
+    no-loop
+when
+    $c  : CustomerFact( pep == true, sanctionsMatch == null )
+    $tx : TransactionFact( !blocked )
+then
+    $tx.setBlocked( true );
+    $tx.setBlockReason( "PEP_EDD_REQUIRED" );
+    $tx.getFraudFlags().add( "PEP_EDD_REQUIRED" );
+    $c.setAmlAlert( true );
+    update( $tx );
+    update( $c );
+end
+
+// ── Rule 3: High risk score — flag for manual AML review ──────────────────────
+rule "High Risk Score — AML Alert"
+    salience 80
+    no-loop
+when
+    $c  : CustomerFact( riskScore > 80, sanctionsMatch == null )
+    $tx : TransactionFact()
+then
+    $c.setAmlAlert( true );
+    $tx.getFraudFlags().add( "HIGH_RISK_SCORE" );
+    update( $tx );
+    update( $c );
+end
