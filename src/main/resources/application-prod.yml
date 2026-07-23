@@ -5,9 +5,9 @@ spring:
 
   # ── Database ──────────────────────────────────────────────────────────────
   datasource:
-    url: jdbc:postgresql://localhost:5432/banking_db
-    username: banking_user
-    password: ${DB_PASSWORD}           # injected from /opt/aurum/.env
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/banking_db}
+    username: ${SPRING_DATASOURCE_USERNAME:banking_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
     hikari:
       pool-name: AurumHikariPool
       maximum-pool-size: 20
@@ -35,7 +35,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI}
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8180/realms/banking/protocol/openid-connect/certs}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/banking}
 
   # ── Lifecycle ────────────────────────────────────────────────────────────
   lifecycle:

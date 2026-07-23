@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aurum-postgres
+    environment:
+      POSTGRES_DB: banking_db
+      POSTGRES_USER: banking_user
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U banking_user -d banking_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: aurum-keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/banking_db
+      KC_DB_USERNAME: banking_user
+      KC_DB_PASSWORD: postgres
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8180
+      KC_HOSTNAME_STRICT: false
+      KC_HTTP_ENABLED: true
+    ports:
+      - "8180:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: start-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  banking-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aurum-banking-app
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: banking_user
+      SPRING_DATASOURCE_PASSWORD: postgres
+      KEYCLOAK_JWK_URI: http://keycloak:8080/realms/banking/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/banking
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql:ro
+
+volumes:
+  postgres_data:

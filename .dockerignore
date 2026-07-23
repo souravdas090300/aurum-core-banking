@@ -1,0 +1,52 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+HELP.md
+LICENSE
+
+# Scripts
+setup-keycloak.ps1
+test-all-apis.ps1
+mvnw
+mvnw.cmd
+
+# Test
+src/test/
+test-results.txt
+
+# Docker
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Frontend (if not needed in backend container)
+frontend/
